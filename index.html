@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bydsq | Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-color: #5865f2;
+            --card-bg: #0b0b0b;
+            --main-bg: #050505;
+            --tag-bg: #1e1f22;
+            --glow-color: #ff0000;
+            --status-color: #f04747;
+            --tooltip-bg: #111214;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--main-bg); color: white;
+            font-family: 'Inter', sans-serif; display: flex;
+            justify-content: center; align-items: center; overflow: hidden;
+        }
+
+        /* Экран загрузки */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--main-bg); z-index: 9999; display: flex;
+            justify-content: center; align-items: center; transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(255,0,0,0.1);
+            border-left-color: var(--glow-color); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #particles-js { position: absolute; width: 100%; height: 100%; z-index: 1; }
+
+        .container {
+            position: relative; z-index: 10; width: 340px;
+            border-radius: 16px; background: var(--card-bg);
+            overflow: hidden; border: 1px solid rgba(255, 0, 0, 0.15);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.1);
+            transition: transform 0.1s ease-out; transform-style: preserve-3d;
+            opacity: 0; transform: scale(0.9); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Показываем карточку после загрузки */
+        .container.loaded { opacity: 1; transform: scale(1); }
+
+        .banner {
+            height: 105px; width: 100%;
+            background-image: url('https://i.pinimg.com/originals/4c/b4/29/4cb4290f3bb50bc73347bb8f29bad7cb.gif');
+            background-size: cover; background-position: center;
+        }
+
+        .content { padding: 16px; position: relative; }
+
+        /* Tooltips */
+        .tooltip-wrapper { position: relative; display: inline-flex; justify-content: center; }
+        .tooltip-text {
+            position: absolute; bottom: 125%; background: var(--tooltip-bg);
+            color: white; padding: 6px 10px; border-radius: 5px;
+            font-size: 11px; font-weight: 600; white-space: nowrap;
+            opacity: 0; visibility: hidden; transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 100;
+            pointer-events: none; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .tooltip-wrapper:hover .tooltip-text { opacity: 1; visibility: visible; bottom: 140%; }
+
+        /* Badges */
+        .badges-container {
+            position: absolute; top: 12px; right: 16px;
+            display: flex; gap: 6px; background: rgba(0,0,0,0.6);
+            padding: 4px 8px; border-radius: 8px; align-items: center;
+        }
+        .badge-img { width: 20px; height: 20px; cursor: pointer; }
+
+        /* Avatar & Status */
+        .avatar-wrapper { position: absolute; top: -45px; left: 16px; padding: 4px; background: var(--card-bg); border-radius: 50%; cursor: pointer; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+        .status-dot {
+            position: absolute; bottom: 6px; right: 6px;
+            width: 16px; height: 16px; border-radius: 50%;
+            border: 4px solid var(--card-bg); background: var(--status-color);
+            box-shadow: 0 0 10px var(--status-color); transition: box-shadow 0.3s ease;
+        }
+        .avatar-wrapper:hover .status-dot { box-shadow: 0 0 20px var(--status-color), 0 0 5px var(--status-color); }
+        .status-tooltip {
+            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: var(--tooltip-bg); color: white; padding: 6px 10px; border-radius: 5px;
+            font-size: 11px; font-weight: 600; white-space: nowrap;
+            opacity: 0; visibility: hidden; transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 100;
+        }
+        .avatar-wrapper:hover .status-tooltip { opacity: 1; visibility: visible; bottom: 110%; }
+
+        /* Info Section */
+        .name-section { margin-top: 45px; }
+        .name-row { display: flex; align-items: center; gap: 10px; }
+        @keyframes glow-pulse {
+            0%, 100% { text-shadow: 0 0 8px var(--glow-color); }
+            50% { text-shadow: 0 0 20px var(--glow-color), 0 0 30px var(--glow-color); }
+        }
+        h1 { font-size: 22px; margin: 0; font-weight: 800; animation: glow-pulse 2s infinite; text-transform: uppercase; }
+        .tag-pill { background: var(--tag-bg); color: #b5bac1; font-size: 13px; padding: 2px 8px; border-radius: 6px; }
+        .domain { color: #00a8fc; text-decoration: none; font-size: 13px; margin: 8px 0 4px 0; display: inline-block; }
+        .member-since { margin-top: 10px; }
+        .member-header { text-transform: uppercase; font-size: 10px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+        .member-date { font-size: 12px; color: #b5bac1; }
+
+        hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 16px 0; }
+
+        /* Activity */
+        .activity-header { text-transform: uppercase; font-weight: 800; font-size: 11px; margin-bottom: 12px; }
+        .activity-card { background: #18191c; border-radius: 8px; padding: 12px; display: flex; gap: 12px; align-items: center; }
+        .activity-icon { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #2b2d31; }
+        .activity-name { font-weight: 700; color: white; font-size: 12px; }
+        .activity-detail, .activity-time { color: #b5bac1; font-size: 11px; margin-top: 2px; }
+
+        .views-badge { margin-top: 15px; font-size: 11px; color: #4e5058; display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="particles-js"></div>
+
+    <div class="container" id="card">
+        <div class="banner"></div>
+        
+        <div class="content">
+            <div class="badges-container">
+                <div class="tooltip-wrapper">
+                    <span class="tooltip-text">Subscriber since Jan 28, 2026</span>
+                    <img src="https://raw.githubusercontent.com/mezotv/discord-badges/main/assets/discordnitro.svg" class="badge-img">
+                </div>
+                <div class="tooltip-wrapper">
+                    <span class="tooltip-text">Completed a Quest</span>
+                    <img src="https://cdn.discordapp.com/badge-icons/7d9ae358c8c5e118768335dbe68b4fb8.png" class="badge-img">
+                </div>
+                <div class="tooltip-wrapper">
+                    <span class="tooltip-text">Collected the Orb Profile Badge</span>
+                    <img src="https://cdn.discordapp.com/badge-icons/83d8a1eb09a8d64e59233eec5d4d5c2d.png" class="badge-img">
+                </div>
+            </div>
+
+            <div class="avatar-wrapper">
+                <div id="status-text" class="status-tooltip">Do Not Disturb</div>
+                <img id="discord-avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="avatar">
+                <div id="status-dot" class="status-dot"></div>
+            </div>
+
+            <div class="name-section">
+                <div class="name-row">
+                    <h1>BYDSQ</h1>
+                    <span class="tag-pill">@bydsq</span>
+                </div>
+                <a href="https://webrat.life/" class="domain">https://webrat.life/</a>
+                <div class="member-since">
+                    <div class="member-header">Discord Member Since</div>
+                    <div class="member-date">Apr 17, 2020</div>
+                </div>
+            </div>
+
+            <hr>
+
+            <div id="activity-section" style="display: none;">
+                <div class="activity-header">Currently Playing</div>
+                <div class="activity-card">
+                    <img id="act-icon" src="" class="activity-icon">
+                    <div class="activity-info">
+                        <div id="act-name" class="activity-name"></div>
+                        <div id="act-detail" class="activity-detail"></div>
+                        <div id="act-state" class="activity-detail"></div>
+                        <div id="act-time" class="activity-time"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="views-badge">
+                <i class="fas fa-eye"></i> <span id="view-val">0</span> views
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        const DISCORD_ID = '700462776149344346';
+        let startTime = null;
+
+        async function updateLanyard() {
+            try {
+                const response = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_ID}`);
+                const { data } = await response.json();
+                
+                const avatarImg = document.getElementById('discord-avatar');
+                if(data.discord_user.avatar) {
+                    avatarImg.src = `https://cdn.discordapp.com/avatars/${DISCORD_ID}/${data.discord_user.avatar}.png?size=256`;
+                }
+
+                const colors = { online: '#43b581', idle: '#faa61a', dnd: '#f04747', offline: '#747f8d' };
+                const statusNames = { online: 'Online', idle: 'Idle', dnd: 'Do Not Disturb', offline: 'Offline' };
+                
+                const currentStatus = data.discord_status;
+                document.getElementById('status-dot').style.backgroundColor = colors[currentStatus];
+                document.getElementById('status-text').innerText = statusNames[currentStatus];
+                document.documentElement.style.setProperty('--status-color', colors[currentStatus]);
+
+                const game = data.activities.find(a => a.type === 0);
+                const actSection = document.getElementById('activity-section');
+                
+                if (game) {
+                    actSection.style.display = 'block';
+                    document.getElementById('act-name').innerText = game.name;
+                    document.getElementById('act-detail').innerText = game.details || '';
+                    document.getElementById('act-state').innerText = game.state || '';
+                    startTime = (game.timestamps && game.timestamps.start) ? game.timestamps.start : null;
+
+                    const iconImg = document.getElementById('act-icon');
+                    if (game.assets && game.assets.large_image) {
+                        let assetId = game.assets.large_image;
+                        iconImg.src = assetId.startsWith("mp:external") ? "https://media.discordapp.net/external/" + assetId.split("mp:external/")[1] : `https://dcdn.dstn.to/app-assets/${game.application_id}/${assetId}.png`;
+                    } else {
+                        iconImg.src = `https://dcdn.dstn.to/app-icons/${game.application_id}.png`;
+                    }
+                } else { 
+                    actSection.style.display = 'none'; 
+                    startTime = null;
+                }
+
+                // Ждем загрузки аватарки перед показом
+                if (avatarImg.complete) {
+                    hideLoader();
+                } else {
+                    avatarImg.onload = hideLoader;
+                }
+
+            } catch (e) { 
+                console.error(e);
+                hideLoader(); // В случае ошибки всё равно показываем карточку
+            }
+        }
+
+        function hideLoader() {
+            setTimeout(() => {
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('card').classList.add('loaded');
+                }, 500);
+            }, 800); // Небольшая задержка для красоты
+        }
+
+        setInterval(() => {
+            if (startTime) {
+                const diff = Date.now() - startTime;
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                document.getElementById('act-time').innerText = h > 0 ? `${h}:${m.toString().padStart(2, '0')} elapsed` : `${m}:${s.toString().padStart(2, '0')} elapsed`;
+            }
+        }, 1000);
+
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 60 },
+                "color": { "value": "#ffffff" },
+                "opacity": { "value": 0.2 },
+                "size": { "value": 2 },
+                "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.1, "width": 1 },
+                "move": { "enable": true, "speed": 1 }
+            }
+        });
+
+        const card = document.getElementById('card');
+        window.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.clientX) / 70;
+            const y = (window.innerHeight / 2 - e.clientY) / 70;
+            card.style.transform = `rotateY(${-x}deg) rotateX(${y}deg)`;
+        });
+
+        updateLanyard();
+    </script>
+</body>
+</html>
