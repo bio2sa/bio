@@ -91,18 +91,13 @@
             transition: transform 0.5s ease-out;
         }
 
-        .content { padding: 20px; position: relative; flex-grow: 1; padding-bottom: 40px; }
+        .content { padding: 20px; position: relative; flex-grow: 1; padding-bottom: 45px; }
 
-        /* ИСПРАВЛЕННОЕ ПОЗИЦИОНИРОВАНИЕ ВРЕМЕНИ */
         .system-time {
-            position: absolute;
-            bottom: 12px;
-            right: 20px;
+            position: absolute; bottom: 12px; right: 20px;
             font-family: 'Courier New', monospace;
-            font-size: 10px;
-            color: rgba(255, 0, 0, 0.5);
-            letter-spacing: 1px;
-            pointer-events: none;
+            font-size: 10px; color: rgba(255, 0, 0, 0.5);
+            letter-spacing: 1px; pointer-events: none;
         }
 
         .badges-container {
@@ -118,11 +113,13 @@
             border-radius: 50%; display: inline-block;
         }
         .avatar { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
+        
         .status-dot {
             position: absolute; bottom: 8px; right: 8px;
             width: 18px; height: 18px; border-radius: 50%;
             border: 4px solid #0b0b0b; background: var(--status-color);
             box-shadow: 0 0 10px var(--status-color);
+            cursor: pointer;
         }
 
         .name-section { margin-top: 50px; }
@@ -144,13 +141,29 @@
             display: flex; 
             gap: 15px; 
             align-items: center;
-            margin-bottom: 10px; /* Добавили отступ снизу */
+            margin-bottom: 10px;
         }
         .activity-icon { width: 70px; height: 70px; border-radius: 10px; object-fit: cover; background: #2b2d31; }
         .activity-name { font-weight: 700; font-size: 14px; }
-        .activity-detail { color: #b5bac1; font-size: 12px; margin-top: 2px; }
+        .activity-detail, .activity-time { color: #b5bac1; font-size: 12px; margin-top: 2px; }
 
+        /* ТУЛТИПЫ */
         .tooltip-wrapper { position: relative; display: flex; justify-content: center; }
+        
+        /* Специальный стиль для тултипа аватара/статуса */
+        .avatar-wrapper .status-tooltip {
+            position: absolute; bottom: 110px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--tooltip-bg);
+            color: white; padding: 6px 10px; border-radius: 5px;
+            font-size: 11px; font-weight: 600; white-space: nowrap;
+            opacity: 0; visibility: hidden; transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 100;
+            pointer-events: none; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .avatar-wrapper:hover .status-tooltip { opacity: 1; visibility: visible; }
+
+        /* Тултипы для значков */
         .tooltip-text {
             position: absolute; bottom: 140%; left: 50%;
             transform: translateX(-50%);
@@ -191,6 +204,7 @@
             </div>
 
             <div class="avatar-wrapper">
+                <div id="status-tooltip-text" class="status-tooltip">Offline</div>
                 <img id="discord-avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="avatar">
                 <div id="status-dot" class="status-dot"></div>
             </div>
@@ -216,6 +230,7 @@
                     <div class="activity-info">
                         <div id="act-name" class="activity-name"></div>
                         <div id="act-detail" class="activity-detail"></div>
+                        <div id="act-time" class="activity-time"></div>
                     </div>
                 </div>
             </div>
@@ -257,7 +272,6 @@
         const banner = document.getElementById('banner');
         document.addEventListener('mousemove', (e) => {
             cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
-            // Делитель 200 для супер-плавного и едва заметного наклона
             const x = (window.innerWidth / 2 - e.clientX) / 200;
             const y = (window.innerHeight / 2 - e.clientY) / 200;
             card.style.transform = `rotateY(${-x}deg) rotateX(${y}deg)`;
@@ -265,21 +279,46 @@
         });
 
         const DISCORD_ID = '700462776149344346';
+        let activityInterval;
+
         async function updateLanyard() {
             try {
                 const response = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_ID}`);
                 const { data } = await response.json();
-                const avatarImg = document.getElementById('discord-avatar');
-                if(data.discord_user.avatar) avatarImg.src = `https://cdn.discordapp.com/avatars/${DISCORD_ID}/${data.discord_user.avatar}.png?size=256`;
+                
+                if(data.discord_user.avatar) {
+                    document.getElementById('discord-avatar').src = `https://cdn.discordapp.com/avatars/${DISCORD_ID}/${data.discord_user.avatar}.png?size=256`;
+                }
                 const colors = { online: '#43b581', idle: '#faa61a', dnd: '#f04747', offline: '#747f8d' };
                 document.getElementById('status-dot').style.backgroundColor = colors[data.discord_status];
+                
+                // Обновление текста тултипа статуса
+                const statusText = data.discord_status.charAt(0).toUpperCase() + data.discord_status.slice(1);
+                document.getElementById('status-tooltip-text').innerText = statusText;
+
                 const game = data.activities.find(a => a.type === 0);
                 if (game) {
                     document.getElementById('activity-section').style.display = 'block';
                     document.getElementById('act-name').innerText = game.name;
                     document.getElementById('act-detail').innerText = game.details || '';
                     document.getElementById('act-icon').src = `https://dcdn.dstn.to/app-icons/${game.application_id}?size=512`;
-                } else { document.getElementById('activity-section').style.display = 'none'; }
+                    
+                    if (game.timestamps && game.timestamps.start) {
+                        if (activityInterval) clearInterval(activityInterval);
+                        const start = game.timestamps.start;
+                        activityInterval = setInterval(() => {
+                            const diff = Date.now() - start;
+                            const h = Math.floor(diff / 3600000);
+                            const m = Math.floor((diff % 3600000) / 60000);
+                            const s = Math.floor((diff % 60000) / 1000);
+                            const timeStr = h > 0 ? `${h}h ${m}m ${s}s elapsed` : `${m}:${s.toString().padStart(2, '0')} elapsed`;
+                            document.getElementById('act-time').innerText = timeStr;
+                        }, 1000);
+                    }
+                } else {
+                    document.getElementById('activity-section').style.display = 'none';
+                    if (activityInterval) clearInterval(activityInterval);
+                }
                 hideLoader();
             } catch (e) { hideLoader(); }
         }
